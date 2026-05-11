@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Seoul Bike Predictor</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-header { background-color: #2c3e50; color: white; font-weight: bold; }
+        .result-card { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; }
+        .form-label { font-weight: 500; font-size: 0.9rem; color: #495057; display: flex; align-items: center; }
+        .icon-spacing { margin-right: 8px; color: #0d6efd; }
+        /* Make the question mark icon slightly lighter and smaller */
+        .help-icon { font-size: 0.85rem; color: #adb5bd; margin-left: 6px; cursor: help; }
+        .help-icon:hover { color: #0d6efd; }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container max-w-md">
+        
+        <div class="text-center mb-5 mt-3">
+            <h1 class="display-5 fw-bold"><i class="bi bi-bicycle text-primary"></i> Seoul Bike Demand Predictor</h1>
+            <p class="text-muted">Adjust the environmental factors below to forecast hourly bike rentals.</p>
+        </div>
+
+        <!-- The Result Section -->
+        {% if prediction is not None %}
+            <div class="card result-card shadow-lg mb-4 text-center border-0">
+                <div class="card-body py-4">
+                    <h5 class="card-title text-uppercase opacity-75 mb-2">Predicted Hourly Demand</h5>
+                    <h1 class="display-2 fw-bold mb-0"><i class="bi bi-people-fill me-3"></i>{{ prediction }}</h1>
+                    <p class="mt-2 opacity-75">Bikes likely to be rented under these conditions</p>
+                </div>
+            </div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="row g-4">
+                
+                <!-- Card 1: Time & Calendar -->
+                <div class="col-lg-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header"><i class="bi bi-calendar3 icon-spacing text-light"></i> Time & Calendar</div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-clock icon-spacing"></i>Hour of Day
+                                    <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Military time: 0 is Midnight, 23 is 11:00 PM."></i>
+                                </label>
+                                <input type="number" name="hour" class="form-control" required value="{{ values.hour }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-tree icon-spacing"></i>Season
+                                    <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="The current meteorological season in Seoul."></i>
+                                </label>
+                                <select name="season" class="form-select">
+                                    <option value="Spring" {% if values.season == 'Spring' %}selected{% endif %}>Spring</option>
+                                    <option value="Summer" {% if values.season == 'Summer' %}selected{% endif %}>Summer</option>
+                                    <option value="Autumn" {% if values.season == 'Autumn' %}selected{% endif %}>Autumn</option>
+                                    <option value="Winter" {% if values.season == 'Winter' %}selected{% endif %}>Winter</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-balloon icon-spacing"></i>Holiday?
+                                    <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Is it currently a recognized public holiday?"></i>
+                                </label>
+                                <select name="holiday" class="form-select">
+                                    <option value="No Holiday" {% if values.holiday == 'No Holiday' %}selected{% endif %}>No</option>
+                                    <option value="Holiday" {% if values.holiday == 'Holiday' %}selected{% endif %}>Yes</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-building-check icon-spacing"></i>Functioning Day?
+                                    <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Is the bike rental system operational today? If 'No', rentals will be 0."></i>
+                                </label>
+                                <select name="functioning" class="form-select">
+                                    <option value="Yes" {% if values.functioning == 'Yes' %}selected{% endif %}>Yes</option>
+                                    <option value="No" {% if values.functioning == 'No' %}selected{% endif %}>No</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Weather Conditions -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header"><i class="bi bi-cloud-sun icon-spacing text-light"></i> Weather Conditions</div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-thermometer-half icon-spacing"></i>Temperature
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Ambient air temperature in Celsius (°C)."></i>
+                                    </label>
+                                    <input type="number" step="0.1" name="temp" class="form-control" required value="{{ values.temp }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-moisture icon-spacing"></i>Humidity
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Relative humidity percentage (%)."></i>
+                                    </label>
+                                    <input type="number" name="humidity" class="form-control" required value="{{ values.humidity }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-wind icon-spacing"></i>Wind Speed
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Wind speed measured in meters per second (m/s)."></i>
+                                    </label>
+                                    <input type="number" step="0.1" name="wind" class="form-control" required value="{{ values.wind }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-eye icon-spacing"></i>Visibility
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Visibility distance measured in 10-meter increments (max 2000)."></i>
+                                    </label>
+                                    <input type="number" name="vis" class="form-control" required value="{{ values.vis }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-droplet icon-spacing"></i>Dew Point
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="The temperature (°C) at which air becomes saturated with water vapor."></i>
+                                    </label>
+                                    <input type="number" step="0.1" name="dew" class="form-control" required value="{{ values.dew }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="bi bi-brightness-high icon-spacing"></i>Solar Rad.
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Solar radiation measured in Megajoules per square meter (MJ/m2)."></i>
+                                    </label>
+                                    <input type="number" step="0.1" name="solar" class="form-control" required value="{{ values.solar }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-cloud-rain icon-spacing"></i>Rainfall
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Amount of rainfall measured in millimeters (mm)."></i>
+                                    </label>
+                                    <input type="number" step="0.1" name="rain" class="form-control" required value="{{ values.rain }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="bi bi-snow icon-spacing"></i>Snowfall
+                                        <i class="bi bi-question-circle-fill help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Amount of snowfall measured in centimeters (cm)."></i>
+                                    </label>
+                                    <input type="number" step="0.1" name="snow" class="form-control" required value="{{ values.snow }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- End Row -->
+
+            <!-- Action Buttons -->
+            <div class="d-flex gap-3 mt-4 mb-5 justify-content-center">
+                <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm">
+                    <i class="bi bi-cpu"></i> Predict Demand
+                </button>
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-lg px-4 shadow-sm">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset to Default
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper (Required for Tooltips to work) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script to Initialize Tooltips -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+</body>
+</html>
